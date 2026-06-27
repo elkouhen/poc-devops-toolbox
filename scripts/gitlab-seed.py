@@ -71,14 +71,23 @@ def _resolve_repo_dir(source_url: str | None, local_path: Path, label: str) -> P
             capture_output=True, text=True,
         )
         if result.returncode != 0:
+            local_repo = _resolved_existing_git_dir(local_path)
+            if local_repo:
+                print(
+                    f"Clone de {label} impossible depuis {source_url}, "
+                    f"utilisation du dépôt local {local_repo}.",
+                    file=sys.stderr,
+                )
+                return local_repo
             print(f"Échec du clone de {label}: {result.stderr.strip()}", file=sys.stderr)
             sys.exit(1)
         return tmpdir
 
-    if not (local_path / ".git").is_dir():
+    local_repo = _resolved_existing_git_dir(local_path)
+    if not local_repo:
         print(f"Dépôt git {label} introuvable: {local_path}", file=sys.stderr)
         sys.exit(1)
-    return local_path
+    return local_repo
 
 
 def _resolved_existing_git_dir(path: Path) -> Path | None:

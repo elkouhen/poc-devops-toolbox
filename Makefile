@@ -1,9 +1,10 @@
 GITLAB_DOMAIN     ?= 192.168.33.100.nip.io
-PLATFORM_REPO_ROOT ?= $(abspath ../poc-devops-platform)
+PLATFORM_REPO_ROOT ?= $(abspath ../platform-cicd)
 PLATFORM_REPO_URL ?=
 GITLAB_TOKEN      ?=
 APPS_BASE_DIR     ?= $(CURDIR)
 SIBLING_PROJECTS_DIR ?= $(abspath $(APPS_BASE_DIR)/..)
+CI_TEMPLATE_SOURCE_DIR ?= $(abspath ../ci-templates)
 ARGOCD_NAMESPACE  ?= argocd
 GITLAB_NAMESPACE  ?= gitlab
 
@@ -22,6 +23,7 @@ init-project: ## Onboard une app via MR: make init-project CODE_REPO=<url-http> 
 gitlab-seed: ## Seed les projets GitLab depuis l'inventaire plateforme
 	PLATFORM_REPO_ROOT=$(PLATFORM_REPO_ROOT) PLATFORM_REPO_URL=$(PLATFORM_REPO_URL) GITLAB_URL=http://gitlab.$(GITLAB_DOMAIN) \
 	    GITLAB_NAMESPACE=$(GITLAB_NAMESPACE) APPS_BASE_DIR=$(APPS_BASE_DIR) SIBLING_PROJECTS_DIR=$(SIBLING_PROJECTS_DIR) \
+	    CI_TEMPLATE_SOURCE_DIR=$(CI_TEMPLATE_SOURCE_DIR) \
 	    GITLAB_TOKEN=$(GITLAB_TOKEN) python3 scripts/gitlab-seed.py
 
 get-gitlab-token: ## Affiche le GITLAB_TOKEN (usage : eval $(make get-gitlab-token))
