@@ -1,8 +1,8 @@
-# poc-devops-toolbox
+# toolbox
 
 Scripts partagés pour piloter les projets `poc-devops`.
 
-Les scripts de bootstrap restent utilisables depuis `poc-devops-platform`. Cette toolbox contient une copie réutilisable des utilitaires Python, avec une racine plateforme configurable.
+Les scripts de bootstrap restent utilisables depuis `platform-cicd`. Cette toolbox contient une copie réutilisable des utilitaires Python, avec une racine plateforme configurable.
 
 ## Installation
 
@@ -15,13 +15,13 @@ pip install -r requirements.txt
 ## Ajouter un projet sans checkout plateforme
 
 Pour ajouter un projet standard comme `helloworld`, le développeur n'a pas
-besoin de cloner `poc-devops-platform`. Depuis le dossier qui contient les
+besoin de cloner `platform-cicd`. Depuis le dossier qui contient les
 dépôts `helloworld` et `helloworld-iac`:
 
 ```sh
 PLATFORM_REPO_URL=http://gitlab.192.168.33.100.nip.io/root/poc-devops-platform.git \
 GITLAB_TOKEN=<token> \
-python3 /chemin/poc-devops-toolbox/scripts/init-project.py helloworld
+python3 /chemin/toolbox/scripts/init-project.py helloworld
 ```
 
 Le script clone temporairement le dépôt plateforme, ajoute ou met à jour
@@ -34,7 +34,7 @@ Si les dépôts applicatifs sont dans un autre dossier:
 PLATFORM_REPO_URL=http://gitlab.192.168.33.100.nip.io/root/poc-devops-platform.git \
 GITLAB_TOKEN=<token> \
 PROJECTS_DIR=/chemin/projets \
-python3 /chemin/poc-devops-toolbox/scripts/init-project.py helloworld
+python3 /chemin/toolbox/scripts/init-project.py helloworld
 ```
 
 Les URLs Git restent possibles lorsque le développeur n'a pas non plus les
@@ -43,19 +43,19 @@ dépôts applicatifs en local:
 ```sh
 PLATFORM_REPO_URL=http://gitlab.192.168.33.100.nip.io/root/poc-devops-platform.git \
 GITLAB_TOKEN=<token> \
-python3 /chemin/poc-devops-toolbox/scripts/init-project.py \
+python3 /chemin/toolbox/scripts/init-project.py \
   https://git.example.com/team/helloworld.git \
   https://git.example.com/team/helloworld-iac.git
 ```
 
 ## Supprimer un projet sans checkout plateforme
 
-Pour retirer `helloworld` de la plateforme sans cloner `poc-devops-platform`:
+Pour retirer `helloworld` de la plateforme sans cloner `platform-cicd`:
 
 ```sh
 PLATFORM_REPO_URL=http://gitlab.192.168.33.100.nip.io/root/poc-devops-platform.git \
 GITLAB_TOKEN=<token> \
-python3 /chemin/poc-devops-toolbox/scripts/delete-project.py helloworld
+python3 /chemin/toolbox/scripts/delete-project.py helloworld
 ```
 
 Le script supprime l'entrée `argocd/apps/helloworld.yaml` du dépôt plateforme,
@@ -68,16 +68,16 @@ dépôts GitLab applicatifs.
 Depuis le dépôt plateforme, pour les opérations d'administration:
 
 ```sh
-PLATFORM_REPO_ROOT="$PWD" python3 ../poc-devops-toolbox/scripts/render-argocd-apps.py > argocd/managed/apps-appset.yaml
-PLATFORM_REPO_ROOT="$PWD" python3 ../poc-devops-toolbox/scripts/init-project.py helloworld
-PLATFORM_REPO_ROOT="$PWD" python3 ../poc-devops-toolbox/scripts/init-project.py ../helloworld ../helloworld-iac
-PLATFORM_REPO_ROOT="$PWD" python3 ../poc-devops-toolbox/scripts/delete-project.py helloworld
-PLATFORM_REPO_ROOT="$PWD" python3 ../poc-devops-toolbox/scripts/gitlab-seed.py
-PLATFORM_REPO_ROOT="$PWD" python3 ../poc-devops-toolbox/scripts/argocd-repo-creds.py
-python3 ../poc-devops-toolbox/scripts/gitlab-runner-token.py
+PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/render-argocd-apps.py > argocd/managed/apps-appset.yaml
+PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/init-project.py helloworld
+PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/init-project.py ../helloworld ../helloworld-iac
+PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/delete-project.py helloworld
+PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/gitlab-seed.py
+PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/argocd-repo-creds.py
+python3 ../toolbox/scripts/gitlab-runner-token.py
 ```
 
-Depuis n'importe quel autre répertoire, renseigner `PLATFORM_REPO_ROOT` avec le chemin absolu du dépôt `poc-devops-platform`.
+Depuis n'importe quel autre répertoire, renseigner `PLATFORM_REPO_ROOT` avec le chemin absolu du dépôt `platform-cicd`.
 
 ## Scripts
 

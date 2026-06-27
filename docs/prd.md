@@ -2,12 +2,12 @@
 
 ## Intention du projet
 
-`poc-devops-toolbox` regroupe les scripts réutilisables pour piloter les
+`toolbox` regroupe les scripts réutilisables pour piloter les
 projets du POC sans dépendre directement d'un checkout actif de
-`poc-devops-platform`.
+`platform-cicd`.
 
 La vision globale, le modèle d'onboarding et les limites du POC sont dans
-`../../poc-devops-platform/docs/prd.md`.
+`../../platform-cicd/docs/prd.md`.
 
 ## Produit attendu
 

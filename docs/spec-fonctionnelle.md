@@ -32,4 +32,4 @@ Deux modes sont supportés :
 - dépôt distant avec `PLATFORM_REPO_URL` et `GITLAB_TOKEN`.
 
 Le mode distant est celui attendu pour un utilisateur qui ne veut pas cloner
-manuellement `poc-devops-platform`.
+manuellement `platform-cicd`.

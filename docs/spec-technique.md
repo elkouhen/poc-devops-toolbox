@@ -34,7 +34,7 @@ dépôt manifests.
 
 ## Maintenance
 
-Certains scripts existent aussi dans `poc-devops-platform/scripts/` pour garder
+Certains scripts existent aussi dans `platform-cicd/scripts/` pour garder
 le bootstrap plateforme autonome. Toute correction fonctionnelle d'un script
 partagé doit être répercutée dans les deux emplacements ou remplacée par un
 wrapper explicite documenté.
