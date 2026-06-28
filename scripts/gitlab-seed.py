@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -35,7 +36,7 @@ APPS_FILE = Path(os.environ.get("APPS_FILE", REPO_ROOT / "argocd/apps.yaml"))
 # cloned) platform repo. Default to REPO_ROOT for backward-compat with local mode.
 APPS_BASE_DIR = Path(os.environ.get("APPS_BASE_DIR", str(REPO_ROOT))).resolve()
 SIBLING_PROJECTS_DIR = Path(os.environ.get("SIBLING_PROJECTS_DIR", str(APPS_BASE_DIR.parent))).resolve()
-SEED_SIBLING_PROJECTS = os.environ.get("SEED_SIBLING_PROJECTS", "true").lower() not in ("0", "false", "no")
+SEED_SIBLING_PROJECTS = os.environ.get("SEED_SIBLING_PROJECTS", "false").lower() not in ("0", "false", "no")
 SIBLING_PROJECTS_PUSH_ACCESS_LEVEL = int(os.environ.get("SIBLING_PROJECTS_PUSH_ACCESS_LEVEL", "40"))
 inventory = load_inventory(APPS_FILE)
 
@@ -164,6 +165,24 @@ def _resolved_existing_git_dir(path: Path) -> Path | None:
     return None
 
 
+def _canonical_repo_url(value: str) -> tuple[str, str, str] | None:
+    parsed = urllib.parse.urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    path = parsed.path.strip("/")
+    if path.endswith(".git"):
+        path = path[:-4]
+    return parsed.scheme, parsed.netloc.lower(), path
+
+
+def _is_target_gitlab_url(source_url: str | None, project_path: str) -> bool:
+    if not source_url:
+        return False
+    source = _canonical_repo_url(source_url)
+    target = _canonical_repo_url(f"{GITLAB_URL}/{project_path}.git")
+    return source is not None and source == target
+
+
 def handled_local_repo_dirs() -> set[Path]:
     """Return local repos already seeded by the inventory-specific flows."""
     handled = set()
@@ -246,20 +265,65 @@ def ensure_project(project_path, project_name):
         token=bearer_token,
     )
     if status == 200 and project.get("id"):
+        if project.get("path_with_namespace") != project_path:
+            if project.get("marked_for_deletion_at"):
+                purge_deleted_project(project["id"], project_path, project["path_with_namespace"])
+            else:
+                print(
+                    f"Projet inattendu pour '{project_path}': "
+                    f"{project.get('path_with_namespace')}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        else:
+            return project.get("empty_repo") is True, project["id"]
+
+    status, project = http(
+        f"{GITLAB_URL}/api/v4/projects/{encode_path(project_path)}",
+        token=bearer_token,
+    )
+    if status == 200 and project.get("id"):
         return project.get("empty_repo") is True, project["id"]
 
     print(f"Projet '{project_path}' absent, création...", file=sys.stderr)
-    _, project = http(
+    status, project = http(
         f"{GITLAB_URL}/api/v4/projects",
         method="POST",
         token=bearer_token,
         data={
             "name": project_name,
+            "path": project_path.rsplit("/", 1)[-1],
             "visibility": "private",
             "initialize_with_readme": "false",
         },
     )
+    if not (200 <= status < 300) or not project.get("id"):
+        print(f"Création du projet '{project_path}' impossible (HTTP {status}).", file=sys.stderr)
+        sys.exit(1)
     return True, project["id"]
+
+
+def purge_deleted_project(project_id, project_path, deletion_path):
+    print(f"Projet '{project_path}' marqué pour suppression, purge définitive...", file=sys.stderr)
+    http(
+        f"{GITLAB_URL}/api/v4/projects/{project_id}",
+        method="DELETE",
+        token=bearer_token,
+        data={
+            "permanently_remove": "true",
+            "full_path": deletion_path,
+        },
+    )
+    for _ in range(30):
+        status, _ = http(
+            f"{GITLAB_URL}/api/v4/projects/{encode_path(project_path)}",
+            token=bearer_token,
+        )
+        if status == 404:
+            return
+        time.sleep(1)
+    print(f"Le projet '{project_path}' reste visible après purge.", file=sys.stderr)
+    sys.exit(1)
 
 
 def seed_project_from_dir(project_path, source_dir):
@@ -284,7 +348,7 @@ def seed_project_from_dir(project_path, source_dir):
     print(f"Contenu initial poussé sur 'main' de '{project_path}'.")
 
 
-def seed_project_from_repo(project_path, repo_dir):
+def seed_project_from_repo(project_path, repo_dir, branches_to_push=None):
     """Pousse l'historique git réel d'un dépôt local vers GitLab via un remote nommé dédié.
 
     Préserve l'historique de développement. Le token passe par un header HTTP
@@ -307,6 +371,8 @@ def seed_project_from_repo(project_path, repo_dir):
         ["git", "-C", str(repo_dir), "for-each-ref", "--format=%(refname:short)", "refs/heads/"],
         capture_output=True, text=True, check=True,
     ).stdout.strip().splitlines()
+    if branches_to_push is not None:
+        branches = [branch for branch in branches if branch in branches_to_push]
 
     for branch in branches:
         subprocess.run(
@@ -323,7 +389,7 @@ def seed_repo_branches_from_ref(project_path, repo_dir, source_ref, branches):
     for branch in branches.split():
         subprocess.run(
             ["git", "-C", str(repo_dir), "-c", f"http.extraheader={git_auth_header}",
-             "push", "-q", GITLAB_REMOTE_NAME, f"refs/heads/{source_ref}:refs/heads/{branch}"],
+             "push", "-q", GITLAB_REMOTE_NAME, f"+refs/heads/{source_ref}:refs/heads/{branch}"],
             check=True,
         )
     print(f"Branches '{branches}' disponibles dans '{project_path}'.")
@@ -518,8 +584,8 @@ if not bearer_token or bearer_token == "null":
     print("Échec d'authentification à l'API GitLab", file=sys.stderr)
     sys.exit(1)
 
-credentials = base64.b64encode(f"oauth2:{bearer_token}".encode()).decode()
-git_auth_header = f"Authorization: Basic {credentials}"
+git_credentials = base64.b64encode(f"root:{root_password}".encode()).decode()
+git_auth_header = f"Authorization: Basic {git_credentials}"
 
 # ── Template CI ─────────────────────────────────────────────────────────────
 
@@ -540,8 +606,11 @@ ensure_project_tag(ci_template_project_id, CI_TEMPLATE_REF, "main")
 for app in inventory["apps"]:
     manifests = app["manifests"]
     app_name = app["name"]
+    manifests_source_url = manifests.get("sourceURL")
+    if _is_target_gitlab_url(manifests_source_url, manifests["projectPath"]):
+        manifests_source_url = None
     manifests_source_dir = _resolve_repo_dir(
-        manifests.get("sourceURL"),
+        manifests_source_url,
         APPS_BASE_DIR / manifests["localPath"],
         f"manifests '{app_name}'",
     )
@@ -550,7 +619,7 @@ for app in inventory["apps"]:
 
     _, manifests_project_id = ensure_project(manifests["projectPath"], manifests["projectName"])
     unprotect_main_branch(manifests_project_id)
-    seed_project_from_repo(manifests["projectPath"], manifests_source_dir)
+    seed_project_from_repo(manifests["projectPath"], manifests_source_dir, ["main"])
     seed_repo_branches_from_ref(manifests["projectPath"], manifests_source_dir, "main", " ".join(unique_branches))
     configure_main_gate(manifests_project_id, manifests["mainPushAccessLevel"])
 
@@ -560,8 +629,11 @@ for app in inventory["apps"]:
     code = app["code"]
     manifests = app["manifests"]
     app_name = app["name"]
+    code_source_url = code.get("sourceURL")
+    if _is_target_gitlab_url(code_source_url, code["projectPath"]):
+        code_source_url = None
     code_source_dir = _resolve_repo_dir(
-        code.get("sourceURL"),
+        code_source_url,
         APPS_BASE_DIR / code["localPath"],
         f"code '{app_name}'",
     )

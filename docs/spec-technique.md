@@ -17,6 +17,7 @@ Les variables principales sont :
 
 - `PLATFORM_REPO_ROOT` ;
 - `PLATFORM_REPO_URL` ;
+- `GITHUB_TOKEN` ;
 - `GITLAB_TOKEN` ;
 - `PROJECTS_DIR` ;
 - `APPS_FILE` ;

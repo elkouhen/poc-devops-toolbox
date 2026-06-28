@@ -8,7 +8,7 @@ Local GitOps checkout:
   PLATFORM_REPO_ROOT="$PWD" scripts/delete-project.py helloworld
 
 When PLATFORM_REPO_URL is set, clones the source GitOps repo,
-applies the change, renders the ApplicationSet, and opens a merge request instead
+applies the change, renders the ApplicationSet, and opens a pull/merge request instead
 of writing directly to the local filesystem.
 """
 

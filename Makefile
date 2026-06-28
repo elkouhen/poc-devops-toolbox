@@ -1,9 +1,11 @@
 GITLAB_DOMAIN     ?= 192.168.33.100.nip.io
 PLATFORM_REPO_ROOT ?= $(abspath ../platform-gitops)
 PLATFORM_REPO_URL ?=
+GITHUB_TOKEN      ?=
 GITLAB_TOKEN      ?=
 APPS_BASE_DIR     ?= $(CURDIR)
 SIBLING_PROJECTS_DIR ?= $(abspath $(APPS_BASE_DIR)/..)
+SEED_SIBLING_PROJECTS ?= false
 CI_TEMPLATE_SOURCE_DIR ?= $(abspath ../ci-templates)
 ARGOCD_NAMESPACE  ?= argocd
 GITLAB_NAMESPACE  ?= gitlab
@@ -16,13 +18,14 @@ help:
 init-project: ## Onboard une app via MR: make init-project CODE_REPO=<url-http> IAC_REPO=<url-http>
 	@test -n "$(CODE_REPO)"    || (echo "CODE_REPO est requis"    >&2; exit 1)
 	@test -n "$(IAC_REPO)"    || (echo "IAC_REPO est requis"     >&2; exit 1)
-	@test -n "$(GITLAB_TOKEN)" || (echo "GITLAB_TOKEN est requis (clone + création MR)" >&2; exit 1)
+	@test -n "$(GITHUB_TOKEN)" || (echo "GITHUB_TOKEN est requis (clone + création PR GitHub)" >&2; exit 1)
 	PLATFORM_REPO_ROOT=$(PLATFORM_REPO_ROOT) PLATFORM_REPO_URL=$(PLATFORM_REPO_URL) GITLAB_URL=http://gitlab.$(GITLAB_DOMAIN) \
-	    GITLAB_TOKEN=$(GITLAB_TOKEN) python3 scripts/init-project.py "$(CODE_REPO)" "$(IAC_REPO)"
+	    GITHUB_TOKEN=$(GITHUB_TOKEN) GITLAB_TOKEN=$(GITLAB_TOKEN) python3 scripts/init-project.py "$(CODE_REPO)" "$(IAC_REPO)"
 
 gitlab-seed: ## Seed les projets GitLab depuis l'inventaire plateforme
 	PLATFORM_REPO_ROOT=$(PLATFORM_REPO_ROOT) PLATFORM_REPO_URL=$(PLATFORM_REPO_URL) GITLAB_URL=http://gitlab.$(GITLAB_DOMAIN) \
 	    GITLAB_NAMESPACE=$(GITLAB_NAMESPACE) APPS_BASE_DIR=$(APPS_BASE_DIR) SIBLING_PROJECTS_DIR=$(SIBLING_PROJECTS_DIR) \
+	    SEED_SIBLING_PROJECTS=$(SEED_SIBLING_PROJECTS) \
 	    CI_TEMPLATE_SOURCE_DIR=$(CI_TEMPLATE_SOURCE_DIR) \
 	    GITLAB_TOKEN=$(GITLAB_TOKEN) python3 scripts/gitlab-seed.py
 

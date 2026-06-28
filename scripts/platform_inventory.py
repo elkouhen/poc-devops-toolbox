@@ -43,13 +43,14 @@ def platform_repo_root() -> Path:
 
 def _clone_to_tmp(url: str) -> Path:
     branch = os.environ.get("PLATFORM_BRANCH", "main")
-    token = os.environ.get("GITLAB_TOKEN", "")
+    token = _repo_token(url)
     tmpdir = Path(tempfile.mkdtemp(prefix="platform-"))
     atexit.register(shutil.rmtree, tmpdir, ignore_errors=True)
 
     if token and url.startswith(("http://", "https://")):
         parsed = urllib.parse.urlparse(url)
-        netloc = f"oauth2:{token}@{parsed.hostname}"
+        username = "x-access-token" if parsed.hostname == "github.com" else "oauth2"
+        netloc = f"{username}:{token}@{parsed.hostname}"
         if parsed.port:
             netloc += f":{parsed.port}"
         auth_url = urllib.parse.urlunparse(parsed._replace(netloc=netloc))
@@ -62,6 +63,13 @@ def _clone_to_tmp(url: str) -> Path:
         capture_output=True,
     )
     return tmpdir
+
+
+def _repo_token(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.hostname == "github.com":
+        return os.environ.get("GITHUB_TOKEN", "")
+    return os.environ.get("GITLAB_TOKEN", "")
 
 
 def default_apps_file() -> Path:

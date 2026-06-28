@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clone the GitOps repo, apply changes, push a branch, open a GitLab MR."""
+"""Clone the GitOps repo, apply changes, push a branch, open a PR/MR."""
 from __future__ import annotations
 
 import json
@@ -34,12 +34,39 @@ def _gitlab_api(
         return e.code, json.loads(e.read() or b"{}")
 
 
+def _github_api(
+    path: str,
+    method: str = "GET",
+    data: dict | None = None,
+    token: str = "",
+) -> tuple[int, dict]:
+    url = f"https://api.github.com/{path}"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "poc-devops-toolbox",
+    }
+    body = None
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if data is not None:
+        body = json.dumps(data).encode()
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.status, json.loads(resp.read() or b"null")
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b"{}")
+
+
 def _auth_url(repo_url: str, token: str) -> str:
     """Embed oauth2 token into an HTTP(S) git URL."""
     if not token or not repo_url.startswith(("http://", "https://")):
         return repo_url
     parsed = urllib.parse.urlparse(repo_url)
-    netloc = f"oauth2:{token}@{parsed.hostname}"
+    username = "x-access-token" if parsed.hostname == "github.com" else "oauth2"
+    netloc = f"{username}:{token}@{parsed.hostname}"
     if parsed.port:
         netloc += f":{parsed.port}"
     return urllib.parse.urlunparse(parsed._replace(netloc=netloc))
@@ -133,7 +160,7 @@ def _render_appset(repo_root: Path) -> str:
 def _push_branch_and_create_mr(repo_root: Path, branch: str, commit_msg: str, mr_title: str) -> str:
     platform_url = os.environ["PLATFORM_REPO_URL"]
     gitlab_url = os.environ.get("GITLAB_URL", "http://gitlab.192.168.33.100.nip.io")
-    token = os.environ.get("GITLAB_TOKEN", "")
+    token = _repo_token(platform_url)
     base_branch = os.environ.get("PLATFORM_BRANCH", "main")
 
     _git(repo_root, "config", "user.email", "toolbox@local")
@@ -151,6 +178,10 @@ def _push_branch_and_create_mr(repo_root: Path, branch: str, commit_msg: str, mr
 
     parsed = urllib.parse.urlparse(platform_url)
     project_path = parsed.path.lstrip("/").removesuffix(".git")
+
+    if parsed.hostname == "github.com":
+        return _create_github_pr(project_path, branch, base_branch, mr_title, token)
+
     project_path_encoded = urllib.parse.quote(project_path, safe="")
 
     status, mr = _gitlab_api(
@@ -170,8 +201,31 @@ def _push_branch_and_create_mr(repo_root: Path, branch: str, commit_msg: str, mr
     raise RuntimeError(f"Échec de création de la MR (HTTP {status}): {mr}")
 
 
+def _repo_token(repo_url: str) -> str:
+    parsed = urllib.parse.urlparse(repo_url)
+    if parsed.hostname == "github.com":
+        return os.environ.get("GITHUB_TOKEN", "")
+    return os.environ.get("GITLAB_TOKEN", "")
+
+
+def _create_github_pr(project_path: str, branch: str, base_branch: str, title: str, token: str) -> str:
+    status, pr = _github_api(
+        f"repos/{project_path}/pulls",
+        method="POST",
+        token=token,
+        data={
+            "head": branch,
+            "base": base_branch,
+            "title": title,
+        },
+    )
+    if 200 <= status < 300:
+        return pr.get("html_url", f"https://github.com/{project_path}/pulls")
+    raise RuntimeError(f"Échec de création de la PR GitHub (HTTP {status}): {pr}")
+
+
 def create_mr_for_init(argv: list[str]) -> None:
-    """Clone GitOps repo, run init logic, render appset, open a GitLab MR."""
+    """Clone GitOps repo, run init logic, render appset, open a PR/MR."""
     from init_projects.config import load_config
     from init_projects.app_model import build_app
     from init_projects.inventory import write_app_file
@@ -197,11 +251,11 @@ def create_mr_for_init(argv: list[str]) -> None:
         commit_msg=f"feat(platform): onboard {config.app_name}",
         mr_title=f"[toolbox] Onboard {config.app_name}",
     )
-    print(f"\nMR créée : {mr_url}")
+    print(f"\nPR/MR créée : {mr_url}")
 
 
 def create_mr_for_delete(argv: list[str]) -> None:
-    """Clone GitOps repo, remove app inventory, render appset, open a GitLab MR."""
+    """Clone GitOps repo, remove app inventory, render appset, open a PR/MR."""
     from delete_projects import delete_project
     from init_projects.common import slug
     from platform_inventory import platform_repo_root
@@ -221,7 +275,7 @@ def create_mr_for_delete(argv: list[str]) -> None:
         commit_msg=f"feat(platform): remove {slug(app_name)}",
         mr_title=f"[toolbox] Remove {slug(app_name)}",
     )
-    print(f"\nMR créée : {mr_url}")
+    print(f"\nPR/MR créée : {mr_url}")
 
 
 def _delete_app_name_from_argv(argv: list[str]) -> str:
