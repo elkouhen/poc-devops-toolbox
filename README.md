@@ -70,7 +70,6 @@ dépôts GitLab applicatifs.
 Depuis le dépôt GitOps, pour les opérations d'administration:
 
 ```sh
-PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/render-argocd-apps.py > argocd/managed/apps-appset.yaml
 PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/init-project.py helloworld
 PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/init-project.py ../helloworld ../helloworld-iac
 PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/delete-project.py helloworld
@@ -84,7 +83,6 @@ Depuis n'importe quel autre répertoire, renseigner `PLATFORM_REPO_ROOT` avec le
 ## Scripts
 
 - `filter-argocd-install.py`: filtre le manifeste d'installation ArgoCD.
-- `render-argocd-apps.py`: génère les `AppProject` et l'`ApplicationSet` depuis l'inventaire apps.
 - `init-project.py` et `init_projects/`: ajoute ou met à jour une app dans `argocd/apps/*.yaml`.
 - `delete-project.py`: supprime une app de `argocd/apps/*.yaml` et ouvre une pull/merge request en mode `PLATFORM_REPO_URL`.
 - `gitlab-seed.py`: crée et alimente les projets GitLab déclarés dans l'inventaire.

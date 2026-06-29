@@ -21,7 +21,6 @@ La toolbox expose aussi :
 
 - `gitlab-seed.py` pour créer ou mettre à jour les projets GitLab ;
 - `argocd-repo-creds.py` pour enregistrer les credentials manifests ;
-- `render-argocd-apps.py` pour générer les `AppProject` et `ApplicationSet` ;
 - `get-gitlab-token.py` pour récupérer un token d'administration local.
 
 ## Modes d'utilisation
