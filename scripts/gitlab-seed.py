@@ -124,7 +124,7 @@ CI_TEMPLATE_FILE = (
     or inventory_value("ciTemplate.file")
     or "/gitlab-ci.yml"
 )
-REGISTRY_HOST = os.environ.get("REGISTRY_HOST", "registry.registry.svc.cluster.local:5000")
+REGISTRY_HOST = os.environ.get("REGISTRY_HOST", "ghcr.io/poc-devops-elkouhen")
 INTERNAL_GITLAB_HOST = os.environ.get("INTERNAL_GITLAB_HOST") or yaml_value("gitlab.internalHost")
 
 
