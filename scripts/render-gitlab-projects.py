@@ -12,7 +12,11 @@ from platform_inventory import default_apps_file, load_inventory
 def apps_tfvars(apps_file: Path) -> dict:
     inventory = load_inventory(apps_file)
     apps = [
-        {"name": app["name"], "description": app.get("description", "")}
+        {
+            "name": app["name"],
+            "description": app.get("description", ""),
+            "importFromGithub": app.get("importFromGithub", False),
+        }
         for app in inventory["apps"]
     ]
     return {"apps": apps}
