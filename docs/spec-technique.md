@@ -3,7 +3,6 @@
 ## Structure
 
 - `Makefile` enveloppe les commandes principales.
-- `scripts/init-project.py` délègue à `scripts/init_projects/`.
 - `scripts/delete-project.py` supprime une app de l'inventaire.
 - `scripts/argocd-repo-creds.py` crée les credentials ArgoCD.
 - `scripts/platform_git.py` gère les opérations Git/MR en mode distant.
@@ -26,10 +25,10 @@ Les variables principales sont :
 
 ## Onboarding
 
-Le module `init_projects` charge la configuration CLI, découvre les services,
-construit le modèle d'app, puis écrit `argocd/apps/<app>/`. La sortie
-affiche l'action réalisée, les services découverts, le dépôt de code et le
-dépôt manifests.
+L'ajout d'une app se fait par pull/merge request directe sur `platform-gitops`
+ajoutant `argocd/apps/<app>.yaml` — pas de script dédié dans `toolbox`. Le
+module `init_projects` restant ne porte plus que la résolution du dossier
+`apps/` (`_resolve_apps_dir`), partagée avec le flux de suppression.
 
 La synchronisation des projets GitLab n'est plus portée par `toolbox` : les
 projets sont déclarés dans `gitlab-projects-iac` puis appliqués par le

@@ -224,36 +224,6 @@ def _create_github_pr(project_path: str, branch: str, base_branch: str, title: s
     raise RuntimeError(f"Échec de création de la PR GitHub (HTTP {status}): {pr}")
 
 
-def create_mr_for_init(argv: list[str]) -> None:
-    """Clone GitOps repo, run init logic, render appset, open a PR/MR."""
-    from init_projects.config import load_config
-    from init_projects.app_model import build_app
-    from init_projects.inventory import write_app_file
-    from platform_inventory import platform_repo_root
-
-    config = load_config(argv)  # triggers clone via platform_repo_root()
-    app = build_app(config)
-    action = write_app_file(config.apps_dir, config.app_name, app)
-    print(f"Application '{config.app_name}' {action} dans {config.apps_dir / (config.app_name + '.yaml')}")
-    print(f"Services: {', '.join(config.services)}")
-    print(f"Code:      {config.code_ref}")
-    print(f"Manifests: {config.iac_ref}:{config.kustomize_path}")
-
-    repo_root = platform_repo_root()  # returns the cached tmpdir
-    appset_path = repo_root / "argocd/managed/apps-appset.yaml"
-    appset_path.parent.mkdir(parents=True, exist_ok=True)
-    appset_path.write_text(_render_appset(repo_root))
-
-    branch = f"toolbox/add-{config.app_name}"
-    mr_url = _push_branch_and_create_mr(
-        repo_root,
-        branch=branch,
-        commit_msg=f"feat(platform): onboard {config.app_name}",
-        mr_title=f"[toolbox] Onboard {config.app_name}",
-    )
-    print(f"\nPR/MR créée : {mr_url}")
-
-
 def create_mr_for_delete(argv: list[str]) -> None:
     """Clone GitOps repo, remove app inventory, render appset, open a PR/MR."""
     from delete_projects import delete_project

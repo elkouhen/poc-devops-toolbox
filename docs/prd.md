@@ -33,7 +33,7 @@ La toolbox doit permettre :
 - Les scripts acceptent `PLATFORM_REPO_URL` et `GITHUB_TOKEN` pour travailler
   via clone temporaire et pull request GitHub. Cette URL doit pointer vers le
   dépôt GitOps source sur GitHub.
-- L'onboarding génère ou met à jour `argocd/apps/<app>/`.
+- L'onboarding génère ou met à jour `argocd/apps/<app>.yaml`.
 - La suppression retire l'entrée d'application sans supprimer les dépôts
   applicatifs.
 - Les commandes principales sont disponibles depuis le `Makefile`.

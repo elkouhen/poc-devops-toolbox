@@ -2,12 +2,10 @@
 
 ## Ajouter une application
 
-L'utilisateur peut appeler `init-project.py` avec un nom de projet, deux chemins
-locaux ou deux URLs Git. Le script découvre les sources, construit le modèle
-d'application et écrit le dossier applicatif GitOps.
-
-En mode `PLATFORM_REPO_URL`, la toolbox clone temporairement le dépôt GitOps
-source sur GitHub, pousse une branche dédiée et ouvre une pull request.
+Pas de script : l'utilisateur ouvre directement une pull/merge request sur
+`platform-gitops` ajoutant `argocd/apps/<app>.yaml` (name, description,
+services, hasPreprod). Voir "Onboarding automatique via MR" plus bas pour ce
+qui se déclenche au merge.
 
 ## Supprimer une application
 

@@ -2,7 +2,7 @@
 """Remove an app from the GitOps inventory.
 
 No local GitOps checkout:
-  PLATFORM_REPO_URL=https://github.com/poc-devops-elkouhen/platform-gitops.git scripts/delete-project.py helloworld
+  PLATFORM_REPO_URL=https://github.com/k8s-gitops-lab/platform-gitops.git scripts/delete-project.py helloworld
 
 Local GitOps checkout:
   PLATFORM_REPO_ROOT="$PWD" scripts/delete-project.py helloworld

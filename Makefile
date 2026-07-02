@@ -9,17 +9,14 @@ GITLAB_TOKEN      ?=
 ARGOCD_NAMESPACE  ?= argocd
 GITLAB_NAMESPACE  ?= gitlab
 
-.PHONY: help init-project argocd-repo-creds get-gitlab-token
+.PHONY: help init-project argocd-repo-creds get-gitlab-token check-app-gitlab-ci
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
-init-project: ## Onboard une app via MR: make init-project CODE_REPO=<url-http> IAC_REPO=<url-http>
-	@test -n "$(CODE_REPO)"    || (echo "CODE_REPO est requis"    >&2; exit 1)
-	@test -n "$(IAC_REPO)"    || (echo "IAC_REPO est requis"     >&2; exit 1)
-	@test -n "$(GITHUB_TOKEN)" || (echo "GITHUB_TOKEN est requis (clone + création PR GitHub)" >&2; exit 1)
-	PLATFORM_REPO_ROOT=$(PLATFORM_REPO_ROOT) PLATFORM_REPO_URL=$(PLATFORM_REPO_URL) GITLAB_URL=https://gitlab.$(GITLAB_DOMAIN) \
-	    GITHUB_TOKEN=$(GITHUB_TOKEN) GITLAB_TOKEN=$(GITLAB_TOKEN) python3 scripts/init-project.py "$(CODE_REPO)" "$(IAC_REPO)"
+init-project: ## Deprecated: ouvrir la pull/merge request directement sur platform-gitops
+	@echo "Deprecated : ajoute argocd/apps/<app>.yaml sur une branche et ouvre la pull/merge request directement sur platform-gitops." >&2
+	@exit 1
 
 get-gitlab-token: ## Affiche le GITLAB_TOKEN (usage : eval $(make get-gitlab-token))
 	GITLAB_URL=https://gitlab.$(GITLAB_DOMAIN) \
@@ -29,3 +26,9 @@ argocd-repo-creds: ## Cree les credentials ArgoCD pour les repos manifests prive
 	PLATFORM_REPO_ROOT=$(PLATFORM_REPO_ROOT) PLATFORM_REPO_URL=$(PLATFORM_REPO_URL) GITLAB_URL=https://gitlab.$(GITLAB_DOMAIN) \
 	    GITLAB_NAMESPACE=$(GITLAB_NAMESPACE) ARGOCD_NAMESPACE=$(ARGOCD_NAMESPACE) \
 	    GITLAB_TOKEN=$(GITLAB_TOKEN) python3 scripts/argocd-repo-creds.py
+
+check-app-gitlab-ci: ## Verifie que <app>/.gitlab-ci.yml est coherent avec l'inventaire : make check-app-gitlab-ci APP=helloworld GITLAB_CI_FILE=../helloworld/.gitlab-ci.yml
+	@test -n "$(APP)" || (echo "APP est requis" >&2; exit 1)
+	@test -n "$(GITLAB_CI_FILE)" || (echo "GITLAB_CI_FILE est requis" >&2; exit 1)
+	PLATFORM_REPO_ROOT=$(PLATFORM_REPO_ROOT) PLATFORM_REPO_URL=$(PLATFORM_REPO_URL) \
+	    python3 scripts/check-app-gitlab-ci.py "$(APP)" --gitlab-ci-file "$(GITLAB_CI_FILE)"

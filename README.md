@@ -20,21 +20,12 @@ python3 -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Ajouter un projet sans checkout GitOps
+## Ajouter un projet
 
-Pour ajouter un projet standard comme `helloworld`, le developpeur n'a pas
-besoin de cloner `platform-gitops`. Depuis le dossier qui contient les
-dépôts `helloworld` et `helloworld-iac`:
-
-```sh
-PLATFORM_REPO_URL=https://github.com/poc-devops-elkouhen/platform-gitops.git \
-GITHUB_TOKEN=<token> \
-python3 /chemin/toolbox/scripts/init-project.py helloworld
-```
-
-Le script clone temporairement le dépôt GitOps, ajoute ou met à jour
-`argocd/apps/helloworld/`, pousse une branche `toolbox/add-helloworld`, puis
-ouvre une pull request.
+Il n'y a pas de script d'onboarding : l'équipe applicative ouvre directement
+une pull/merge request sur `platform-gitops` ajoutant
+`argocd/apps/<app>.yaml` (au minimum `name`, `description`, `services`,
+`hasPreprod`). Voir un fichier existant dans `argocd/apps/` comme modèle.
 
 Au merge de cette pull request, le pipeline `.gitlab-ci.yml` du projet
 GitLab `platform-gitops` (développé sur GitLab, mirroré vers GitHub)
@@ -50,37 +41,17 @@ Les credentials ArgoCD pour accéder au dépôt manifests privé sont
 provisionnés séparément par `argocd-repo-creds.py` (voir "Utilisation avec
 checkout GitOps").
 
-Si les dépôts applicatifs sont dans un autre dossier:
-
-```sh
-PLATFORM_REPO_URL=https://github.com/poc-devops-elkouhen/platform-gitops.git \
-GITHUB_TOKEN=<token> \
-PROJECTS_DIR=/chemin/projets \
-python3 /chemin/toolbox/scripts/init-project.py helloworld
-```
-
-Les URLs Git restent possibles lorsque le développeur n'a pas non plus les
-dépôts applicatifs en local:
-
-```sh
-PLATFORM_REPO_URL=https://github.com/poc-devops-elkouhen/platform-gitops.git \
-GITHUB_TOKEN=<token> \
-python3 /chemin/toolbox/scripts/init-project.py \
-  https://git.example.com/team/helloworld.git \
-  https://git.example.com/team/helloworld-iac.git
-```
-
 ## Supprimer un projet sans checkout GitOps
 
 Pour retirer `helloworld` de la plateforme sans cloner `platform-gitops`:
 
 ```sh
-PLATFORM_REPO_URL=https://github.com/poc-devops-elkouhen/platform-gitops.git \
+PLATFORM_REPO_URL=https://github.com/k8s-gitops-lab/platform-gitops.git \
 GITHUB_TOKEN=<token> \
 python3 /chemin/toolbox/scripts/delete-project.py helloworld
 ```
 
-Le script supprime l'entrée `argocd/apps/helloworld/` du dépôt GitOps, pousse
+Le script supprime l'entrée `argocd/apps/helloworld.yaml` du dépôt GitOps, pousse
 une branche `toolbox/delete-helloworld`, puis ouvre une pull request. Il ne
 supprime pas les dépôts GitLab applicatifs.
 
@@ -89,8 +60,6 @@ supprime pas les dépôts GitLab applicatifs.
 Depuis le dépôt GitOps, pour les opérations d'administration:
 
 ```sh
-PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/init-project.py helloworld
-PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/init-project.py ../helloworld ../helloworld-iac
 PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/delete-project.py helloworld
 PLATFORM_REPO_ROOT="$PWD" python3 ../toolbox/scripts/argocd-repo-creds.py
 python3 ../toolbox/scripts/render-gitlab-projects.py
@@ -104,8 +73,7 @@ Depuis n'importe quel autre répertoire, renseigner `PLATFORM_REPO_ROOT` avec le
 
 ## Scripts
 
-- `init-project.py` et `init_projects/`: ajoute ou met à jour une app dans `argocd/apps/<app>/`.
-- `delete-project.py` et `delete_projects.py`: supprime une app de `argocd/apps/<app>/` et ouvre une pull/merge request en mode `PLATFORM_REPO_URL`.
+- `delete-project.py` et `delete_projects.py`: supprime une app de `argocd/apps/<app>.yaml` et ouvre une pull/merge request en mode `PLATFORM_REPO_URL`.
 - `render-gitlab-projects.py`: génère `apps.auto.tfvars.json` (liste des apps + description) pour `gitlab-projects-iac`, à partir de l'inventaire `platform-gitops`.
 - `argocd-repo-creds.py`: crée les credentials ArgoCD pour les dépôts manifests privés.
 - `get-gitlab-token.py`: récupère un token GitLab pour les opérations locales.
@@ -119,7 +87,6 @@ Depuis n'importe quel autre répertoire, renseigner `PLATFORM_REPO_ROOT` avec le
 - `PLATFORM_REPO_URL`: URL GitHub du dépôt GitOps source. Si renseignée, les scripts projet ouvrent une pull request au lieu d'écrire dans un checkout local.
 - `GITHUB_TOKEN`: token utilisé pour cloner/pousser le dépôt GitOps GitHub et créer la pull request.
 - `GITLAB_TOKEN`: token utilisé pour les opérations contre le GitLab de la plateforme (credentials ArgoCD).
-- `PROJECTS_DIR`: dossier contenant les dépôts applicatifs lorsque `init-project.py` est appelé avec un nom de projet. Par défaut: répertoire courant en mode `PLATFORM_REPO_URL`, sinon dossier parent du dépôt GitOps.
 - `APPS_FILE`: chemin explicite vers l'inventaire apps.
 - `APPS_DIR`: dossier contenant les fichiers app YAML.
 - `GITLAB_NAMESPACE`, `GITLAB_URL`, `ARGOCD_NAMESPACE`: paramètres Kubernetes/GitLab utilisés par les scripts de bootstrap.

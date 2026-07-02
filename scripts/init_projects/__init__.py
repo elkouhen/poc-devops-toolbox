@@ -1,1 +1,1 @@
-"""Helpers for scripts/init-project.py."""
+"""Shared helpers for scripts/delete-project.py."""

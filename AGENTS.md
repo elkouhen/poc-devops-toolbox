@@ -3,19 +3,21 @@
 ## Rôle du dépôt
 
 `toolbox` regroupe les scripts d'opération plateforme utilisables indépendamment
-de `platform-cicd`. Il permet d'onboarder des applications et de gérer les
-credentials ArgoCD sans checkout actif de `platform-cicd`.
+de `platform-cicd`. Il permet de retirer des applications et de gérer les
+credentials ArgoCD sans checkout actif de `platform-cicd`. L'ajout d'une
+application se fait par pull/merge request directe sur `platform-gitops`
+(pas de script dédié, voir "Pipeline d'onboarding automatique" ci-dessous).
 
 ## Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
 | `scripts/platform_inventory.py` | Modèle de données partagé (chargement et normalisation de l'inventaire) |
-| `scripts/init-project.py` | Onboarding d'une app (met à jour `argocd/apps/<app>/`) |
 | `scripts/render-gitlab-projects.py` | Génère `apps.auto.tfvars.json` (liste des apps + description) pour `gitlab-projects-iac`, à partir de l'inventaire `platform-gitops` |
 | `scripts/argocd-repo-creds.py` | Crée les secrets ArgoCD pour les dépôts manifests privés |
 | `scripts/get-gitlab-token.py` | Récupère un token GitLab pour les opérations locales |
 | `scripts/delete-project.py` / `delete_projects.py` | Suppression d'apps de l'inventaire |
+| `scripts/check-app-gitlab-ci.py` | Vérifie que `<app>/.gitlab-ci.yml` (SERVICES, SERVICE_NAME, MANIFESTS_PROJECT_PATH, MANIFESTS_PATH, HAS_PREPROD) n'a pas dérivé de l'inventaire |
 
 ## Modes de fonctionnement
 
@@ -26,8 +28,8 @@ PLATFORM_REPO_ROOT=../platform-gitops make argocd-repo-creds
 
 **Mode MR** — clone temporaire depuis GitHub :
 ```bash
-PLATFORM_REPO_URL=https://github.com/poc-devops-elkouhen/platform-gitops \
-GITHUB_TOKEN=<token> make init-project
+PLATFORM_REPO_URL=https://github.com/k8s-gitops-lab/platform-gitops \
+GITHUB_TOKEN=<token> python3 scripts/delete-project.py helloworld
 ```
 
 Les projets GitLab ne sont plus seedés depuis `toolbox`. Ils sont déclarés dans
@@ -52,6 +54,23 @@ Le champ `description` est optionnel, transparent pour `_normalize_app`
 `importFromGithub` (optionnel, défaut `false`) ne doit être mis à `true` que
 pour une app dont le code préexiste déjà sur GitHub avant onboarding — les
 nouvelles apps sont créées vides sur GitLab.
+
+## Vérifier la cohérence inventaire / .gitlab-ci.yml
+
+`<app>/.gitlab-ci.yml` recopie à la main des faits déjà présents dans
+`argocd/apps/<app>.yaml` (services, `hasPreprod`, chemin des manifests...).
+Rien ne les garde synchronisés automatiquement ; `check-app-gitlab-ci.py`
+détecte la dérive au lieu de la laisser silencieuse :
+
+```bash
+PLATFORM_REPO_ROOT=../platform-gitops \
+  make check-app-gitlab-ci APP=helloworld GITLAB_CI_FILE=../helloworld/.gitlab-ci.yml
+```
+
+À lancer après toute modification de l'inventaire d'une app ou de son
+`.gitlab-ci.yml`. Pas encore branché dans une pipeline CI (le job
+`onboard-apps` de `platform-gitops` ne clone pas les dépôts applicatifs) —
+vérification manuelle pour l'instant.
 
 ## Variables d'environnement importantes
 
